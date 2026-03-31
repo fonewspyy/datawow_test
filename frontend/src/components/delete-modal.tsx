@@ -15,9 +15,9 @@ export function DeleteModal({
 }: DeleteModalProps) {
   return (
     <div className="modal-backdrop">
-      <div className="modal-card font-ibm-plex-thai">
-        <div className="flex justify-center">
-          <Image src="/icons/modal-confirm-delete.png" alt="" width={72} height={72} />
+      <div className="modal-card">
+        <div className="modal-icon-wrap">
+          <Image className="modal-icon" src="/icons/modal-confirm-delete.png" alt="" width={64} height={64} />
         </div>
         <h3 className="modal-title">Are you sure to delete?</h3>
         <p className="modal-subtitle">&quot;{concertName}&quot;</p>
