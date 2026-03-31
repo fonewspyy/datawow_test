@@ -177,18 +177,22 @@ describe('ReservationService', () => {
     expect(callCount).toBe(2);
   });
 
-  it('throws ServiceUnavailableException after max retries exhausted', async () => {
-    const p2034Error = new Prisma.PrismaClientKnownRequestError(
-      'Transaction failed due to a write conflict or a deadlock',
-      { code: 'P2034', clientVersion: '6.0.0' },
-    );
+  it(
+    'throws ServiceUnavailableException after max retries exhausted',
+    async () => {
+      const p2034Error = new Prisma.PrismaClientKnownRequestError(
+        'Transaction failed due to a write conflict or a deadlock',
+        { code: 'P2034', clientVersion: '6.0.0' },
+      );
 
-    prisma.$transaction.mockRejectedValue(p2034Error);
+      prisma.$transaction.mockRejectedValue(p2034Error);
 
-    await expect(service.reserve(4, 12)).rejects.toBeInstanceOf(
-      ServiceUnavailableException,
-    );
-  });
+      await expect(service.reserve(4, 12)).rejects.toBeInstanceOf(
+        ServiceUnavailableException,
+      );
+    },
+    30_000,
+  );
 
   it('cancels an active reservation successfully', async () => {
     const existingReservation = {

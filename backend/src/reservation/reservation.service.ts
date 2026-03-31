@@ -8,8 +8,9 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
-const MAX_RETRIES = 3;
-const BASE_DELAY_MS = 50;
+const MAX_RETRIES = 10;
+const BASE_DELAY_MS = 30;
+const MAX_DELAY_MS = 2000;
 
 function isPrismaRetryable(error: unknown): boolean {
   if (
@@ -18,17 +19,29 @@ function isPrismaRetryable(error: unknown): boolean {
   ) {
     return true;
   }
-  if (
-    error instanceof Error &&
-    error.message?.includes('could not serialize access')
-  ) {
-    return true;
+  if (error instanceof Error) {
+    const msg = error.message?.toLowerCase() ?? '';
+    if (
+      msg.includes('could not serialize access') ||
+      msg.includes('timed out') ||
+      msg.includes('connection pool') ||
+      msg.includes('prepared statement')
+    ) {
+      return true;
+    }
   }
   return false;
 }
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function jitteredDelay(attempt: number): number {
+  const exponential = BASE_DELAY_MS * Math.pow(2, attempt);
+  const capped = Math.min(exponential, MAX_DELAY_MS);
+  // Add 0-50% random jitter to prevent thundering herd
+  return capped + Math.random() * capped * 0.5;
 }
 
 @Injectable()
@@ -47,7 +60,7 @@ export class ReservationService {
         }
         lastError = error;
         if (attempt < MAX_RETRIES - 1) {
-          await delay(BASE_DELAY_MS * Math.pow(3, attempt));
+          await delay(jitteredDelay(attempt));
         }
       }
     }

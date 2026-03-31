@@ -175,6 +175,10 @@ export function DashboardShell({ viewMode, children }: DashboardShellProps) {
         className={`dashboard-sidebar${isSidebarExpanded ? " is-open" : ""}`}
         onTransitionEnd={handleSidebarTransitionEnd}
       >
+        <button className="sr-only" type="button" onClick={closeSidebar}>
+          Close menu
+        </button>
+
         <div className="dashboard-sidebar-header">
           <div className="dashboard-sidebar-title">
             {viewMode === "admin" ? "Admin" : "User"}
@@ -234,7 +238,6 @@ export function DashboardShell({ viewMode, children }: DashboardShellProps) {
             type="button"
             aria-label="Open menu"
             aria-controls="dashboard-sidebar"
-            aria-expanded={isSidebarExpanded}
             onClick={openSidebar}
           >
             <span className="hamburger">
