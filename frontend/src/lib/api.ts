@@ -20,21 +20,34 @@ export class ApiError extends Error {
   }
 }
 
+export class NetworkError extends Error {
+  constructor(message = "Unable to connect to the server. Please check your internet connection.") {
+    super(message);
+    this.name = "NetworkError";
+  }
+}
+
 type RequestConfig = RequestInit & {
   token?: string | null;
 };
 
 async function request<T>(path: string, config: RequestConfig = {}): Promise<T> {
   const { token, headers, ...rest } = config;
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...rest,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...headers,
-    },
-    cache: "no-store",
-  });
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      ...rest,
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...headers,
+      },
+      cache: "no-store",
+    });
+  } catch {
+    throw new NetworkError();
+  }
 
   const contentType = response.headers.get("content-type") ?? "";
   const payload = contentType.includes("application/json")

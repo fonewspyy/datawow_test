@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { startTransition, useCallback, useEffect, useEffectEvent, useState } from "react";
 import { useAuth } from "@/components/providers/auth-provider";
 
 type ViewMode = "admin" | "user";
@@ -17,7 +17,7 @@ interface NavItem {
   label: string;
   href?: string;
   icon: string;
-  active: (pathname: string) => boolean;
+  isActive: boolean;
   onClick?: () => void;
   hidden?: boolean;
 }
@@ -29,25 +29,50 @@ export function DashboardShell({ viewMode, children }: DashboardShellProps) {
   const { logout, user } = useAuth();
   const canSwitchToAdmin = user?.role === "ADMIN";
 
+  const closeSidebar = useCallback(() => setIsSidebarOpen(false), []);
+  const closeSidebarOnPathChange = useEffectEvent(() => {
+    startTransition(() => {
+      setIsSidebarOpen(false);
+    });
+  });
+
+  /* Close sidebar whenever route changes (covers programmatic navigation) */
+  useEffect(() => {
+    closeSidebarOnPathChange();
+  }, [pathname]);
+
+  /* Prevent body scroll when mobile sidebar is open + close on Escape */
+  useEffect(() => {
+    document.body.style.overflow = isSidebarOpen ? "hidden" : "";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeSidebar();
+    };
+    if (isSidebarOpen) window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [isSidebarOpen, closeSidebar]);
+
   const items: NavItem[] = viewMode === "admin"
     ? [
         {
           label: "Home",
           href: "/admin",
           icon: "/icons/sidebar-home.png",
-          active: (currentPath) => currentPath === "/admin",
+          isActive: pathname === "/admin",
         },
         {
           label: "History",
           href: "/admin/history",
           icon: "/icons/sidebar-history.png",
-          active: (currentPath) => currentPath.startsWith("/admin/history"),
+          isActive: pathname.startsWith("/admin/history"),
         },
         {
           label: "Switch to user",
           href: "/user",
           icon: "/icons/sidebar-switch.png",
-          active: () => false,
+          isActive: false,
         },
       ]
     : [
@@ -55,47 +80,49 @@ export function DashboardShell({ viewMode, children }: DashboardShellProps) {
           label: "Home",
           href: "/user",
           icon: "/icons/sidebar-home.png",
-          active: (currentPath) => currentPath === "/user",
+          isActive: pathname === "/user",
         },
         {
           label: "History",
           href: "/user/history",
           icon: "/icons/sidebar-history.png",
-          active: (currentPath) => currentPath.startsWith("/user/history"),
+          isActive: pathname.startsWith("/user/history"),
         },
         {
           label: "Switch to Admin",
           href: "/admin",
           icon: "/icons/sidebar-switch.png",
-          active: () => false,
+          isActive: false,
           hidden: !canSwitchToAdmin,
         },
       ];
 
-  const logoutItem: NavItem = {
-    label: "Logout",
-    icon: "/icons/sidebar-logout.png",
-    active: () => false,
-    onClick: () => {
-      logout();
-      router.replace("/login");
-    },
-  };
-
   return (
     <div className="dashboard-shell">
+      {/* Backdrop — click to close sidebar on mobile */}
+      {isSidebarOpen && (
+        <div
+          className="sidebar-backdrop"
+          onClick={closeSidebar}
+          aria-hidden="true"
+        />
+      )}
+
       <aside className={`dashboard-sidebar ${isSidebarOpen ? "is-open" : ""}`}>
-        <div className="dashboard-sidebar-title">
-          {viewMode === "admin" ? "Admin" : "User"}
+        <div className="dashboard-sidebar-header">
+          <div className="dashboard-sidebar-title">
+            {viewMode === "admin" ? "Admin" : "User"}
+          </div>
         </div>
-        <nav className="grid gap-3">
+
+        <nav className="sidebar-nav">
           {items.filter((item) => !item.hidden).map((item) => (
             item.href ? (
               <Link
                 key={item.label}
                 href={item.href}
-                className={`sidebar-link ${item.active(pathname) ? "is-active" : ""}`}
-                onClick={() => setIsSidebarOpen(false)}
+                className={`sidebar-link${item.isActive ? " is-active" : ""}`}
+                onClick={closeSidebar}
               >
                 <Image src={item.icon} alt="" width={24} height={24} />
                 <span>{item.label}</span>
@@ -103,9 +130,9 @@ export function DashboardShell({ viewMode, children }: DashboardShellProps) {
             ) : (
               <button
                 key={item.label}
-                className="sidebar-link text-left"
+                className="sidebar-link"
                 onClick={() => {
-                  setIsSidebarOpen(false);
+                  closeSidebar();
                   item.onClick?.();
                 }}
                 type="button"
@@ -116,25 +143,41 @@ export function DashboardShell({ viewMode, children }: DashboardShellProps) {
             )
           ))}
         </nav>
+
         <div className="sidebar-spacer" />
+
         <button
-          className="sidebar-link text-left"
+          className="sidebar-link"
           type="button"
-          onClick={logoutItem.onClick}
+          onClick={() => {
+            closeSidebar();
+            logout();
+            router.replace("/login");
+          }}
         >
-          <Image src={logoutItem.icon} alt="" width={24} height={24} />
-          <span>{logoutItem.label}</span>
+          <Image src="/icons/sidebar-logout.png" alt="" width={24} height={24} />
+          <span>Logout</span>
         </button>
       </aside>
+
       <main className="dashboard-main">
         <div className="dashboard-main-inner">
-          <button
-            className="mobile-sidebar-toggle"
-            type="button"
-            onClick={() => setIsSidebarOpen((currentValue) => !currentValue)}
-          >
-            {isSidebarOpen ? "Close menu" : "Open menu"}
-          </button>
+          {/* Hamburger toggle — visible only on mobile */}
+          {!isSidebarOpen ? (
+            <button
+              className="mobile-sidebar-toggle"
+              type="button"
+              aria-label="Open menu"
+              aria-expanded={false}
+              onClick={() => setIsSidebarOpen(true)}
+            >
+              <span className="hamburger">
+                <span />
+                <span />
+                <span />
+              </span>
+            </button>
+          ) : null}
           {children}
         </div>
       </main>

@@ -20,7 +20,7 @@ export function HistoryTable({
   includeUser: boolean;
 }) {
   return (
-    <div className="content-card history-table-wrap font-inter">
+    <div className="history-table-wrap font-inter">
       <table className="history-table">
         <thead>
           <tr>

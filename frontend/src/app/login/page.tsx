@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/providers/auth-provider";
-import { api, ApiError, extractFieldErrors } from "@/lib/api";
+import { api, ApiError, extractFieldErrors, NetworkError } from "@/lib/api";
 
 function LoginContent() {
   const router = useRouter();
@@ -21,6 +21,13 @@ function LoginContent() {
     }
   }, [isReady, router, user]);
 
+  function validateLocally(): Record<string, string> {
+    const errors: Record<string, string> = {};
+    if (!username.trim()) errors.username = "Username is required";
+    if (!password) errors.password = "Password is required";
+    return errors;
+  }
+
   return (
     <main className="auth-screen">
       <section className="auth-card">
@@ -32,17 +39,28 @@ function LoginContent() {
           className="auth-form"
           onSubmit={async (event) => {
             event.preventDefault();
+
+            const localErrors = validateLocally();
+            if (Object.keys(localErrors).length > 0) {
+              setFieldErrors(localErrors);
+              return;
+            }
+
             setIsSubmitting(true);
             setFieldErrors({});
 
             try {
-              const response = await api.login(username, password);
+              const response = await api.login(username.trim(), password);
               login(response);
               const nextPath = searchParams.get("next");
               router.push(nextPath ?? (response.user.role === "ADMIN" ? "/admin" : "/user"));
             } catch (error) {
               if (error instanceof ApiError) {
                 setFieldErrors(extractFieldErrors(error));
+              } else if (error instanceof NetworkError) {
+                setFieldErrors({ general: error.message });
+              } else {
+                setFieldErrors({ general: "Something went wrong. Please try again." });
               }
             } finally {
               setIsSubmitting(false);
@@ -52,27 +70,33 @@ function LoginContent() {
           <label className="form-field">
             <span className="field-label">Username</span>
             <input
-              className="field-input"
+              className={`field-input${fieldErrors.username ? " is-invalid" : ""}`}
               placeholder="Please input username"
               value={username}
-              onChange={(event) => setUsername(event.target.value)}
+              onChange={(event) => {
+                setUsername(event.target.value);
+                if (fieldErrors.username) setFieldErrors((prev) => { const { username: _, ...rest } = prev; return rest; });
+              }}
             />
             {fieldErrors.username ? <span className="field-error">{fieldErrors.username}</span> : null}
           </label>
           <label className="form-field">
             <span className="field-label">Password</span>
             <input
-              className="field-input"
+              className={`field-input${fieldErrors.password ? " is-invalid" : ""}`}
               placeholder="Please input password"
               type="password"
               value={password}
-              onChange={(event) => setPassword(event.target.value)}
+              onChange={(event) => {
+                setPassword(event.target.value);
+                if (fieldErrors.password) setFieldErrors((prev) => { const { password: _, ...rest } = prev; return rest; });
+              }}
             />
             {fieldErrors.password ? <span className="field-error">{fieldErrors.password}</span> : null}
           </label>
           {fieldErrors.general ? <p className="form-error">{fieldErrors.general}</p> : null}
           <button className="base-button button-primary w-full" disabled={isSubmitting} type="submit">
-            Login
+            {isSubmitting ? "Signing in…" : "Login"}
           </button>
         </form>
         <div className="auth-meta">

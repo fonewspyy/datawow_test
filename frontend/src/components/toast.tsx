@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { useEffect } from "react";
 
 export interface ToastMessage {
   id: number;
@@ -11,32 +12,42 @@ interface ToastProps {
   onDismiss: (id: number) => void;
 }
 
+const AUTO_DISMISS_MS = 5000;
+
 export function Toast({ toasts, onDismiss }: ToastProps) {
   return (
     <div className="toast-stack font-ibm-plex-thai">
       {toasts.map((toast) => (
-        <div
-          key={toast.id}
-          className={`toast-card ${toast.tone === "error" ? "is-error" : ""}`}
-        >
-          <Image
-            src={toast.tone === "error" ? "/icons/modal-confirm-delete.png" : "/icons/toast-success.png"}
-            alt=""
-            width={24}
-            height={24}
-          />
-          <p className="toast-copy">{toast.message}</p>
-          <button
-            aria-label="Dismiss toast"
-            className="toast-close"
-            onClick={() => onDismiss(toast.id)}
-            title="Dismiss toast"
-            type="button"
-          >
-            <Image src="/icons/toast-close.png" alt="Close toast" width={14} height={14} />
-          </button>
-        </div>
+        <ToastItem key={toast.id} toast={toast} onDismiss={onDismiss} />
       ))}
+    </div>
+  );
+}
+
+function ToastItem({ toast, onDismiss }: { toast: ToastMessage; onDismiss: (id: number) => void }) {
+  useEffect(() => {
+    const timer = setTimeout(() => onDismiss(toast.id), AUTO_DISMISS_MS);
+    return () => clearTimeout(timer);
+  }, [toast.id, onDismiss]);
+
+  return (
+    <div className={`toast-card ${toast.tone === "error" ? "is-error" : ""}`}>
+      <Image
+        src={toast.tone === "error" ? "/icons/modal-confirm-delete.png" : "/icons/toast-success.png"}
+        alt=""
+        width={24}
+        height={24}
+      />
+      <p className="toast-copy">{toast.message}</p>
+      <button
+        aria-label="Dismiss toast"
+        className="toast-close"
+        onClick={() => onDismiss(toast.id)}
+        title="Dismiss toast"
+        type="button"
+      >
+        <Image src="/icons/toast-close.png" alt="Close toast" width={14} height={14} />
+      </button>
     </div>
   );
 }

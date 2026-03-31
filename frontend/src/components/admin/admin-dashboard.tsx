@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ConcertCard } from "@/components/concert-card";
 import { CreateConcertForm } from "@/components/create-concert-form";
 import { DeleteModal } from "@/components/delete-modal";
@@ -8,7 +9,7 @@ import { StatCard } from "@/components/stat-card";
 import { TabSwitcher } from "@/components/tab-switcher";
 import { Toast, type ToastMessage } from "@/components/toast";
 import { useAuth } from "@/components/providers/auth-provider";
-import { api, ApiError, extractFieldErrors } from "@/lib/api";
+import { api, ApiError, extractFieldErrors, NetworkError } from "@/lib/api";
 import type { ConcertItem, DashboardStats } from "@/lib/types";
 
 const defaultStats: DashboardStats = {
@@ -18,7 +19,8 @@ const defaultStats: DashboardStats = {
 };
 
 export function AdminDashboard() {
-  const { token } = useAuth();
+  const { token, logout } = useAuth();
+  const router = useRouter();
   const [stats, setStats] = useState<DashboardStats>(defaultStats);
   const [concerts, setConcerts] = useState<ConcertItem[]>([]);
   const [activeTab, setActiveTab] = useState<"overview" | "create">("overview");
@@ -26,6 +28,8 @@ export function AdminDashboard() {
   const [toastMessages, setToastMessages] = useState<ToastMessage[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<ConcertItem | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!token) {
@@ -35,13 +39,35 @@ export function AdminDashboard() {
     void refresh(token);
   }, [token]);
 
+  function handleAuthError(error: unknown) {
+    if (error instanceof ApiError && error.status === 401) {
+      logout();
+      router.push("/login?next=/admin");
+      return true;
+    }
+    return false;
+  }
+
   async function refresh(currentToken: string) {
-    const [concertItems, dashboardStats] = await Promise.all([
-      api.concerts(currentToken),
-      api.stats(currentToken),
-    ]);
-    setConcerts(concertItems);
-    setStats(dashboardStats);
+    try {
+      setFetchError(null);
+      const [concertItems, dashboardStats] = await Promise.all([
+        api.concerts(currentToken),
+        api.stats(currentToken),
+      ]);
+      setConcerts(concertItems);
+      setStats(dashboardStats);
+    } catch (error) {
+      if (handleAuthError(error)) return;
+      const msg = error instanceof NetworkError
+        ? error.message
+        : error instanceof ApiError
+          ? error.message
+          : "Failed to load data. Please try again.";
+      setFetchError(msg);
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   function showToast(message: string, tone: ToastMessage["tone"] = "success") {
@@ -54,72 +80,95 @@ export function AdminDashboard() {
 
   return (
     <>
-      <div className="stats-grid">
-        <StatCard
-          icon="/icons/statcard-seats.png"
-          label="Total of seats"
-          value={stats.totalSeats}
-          tone="seat"
-        />
-        <StatCard
-          icon="/icons/statcard-reserve.png"
-          label="Reserve"
-          value={stats.reservedSeats}
-          tone="reserve"
-        />
-        <StatCard
-          icon="/icons/statcard-cancel.png"
-          label="Cancel"
-          value={stats.cancelledReservations}
-          tone="cancel"
-        />
-      </div>
-
-      <TabSwitcher activeTab={activeTab} onChange={setActiveTab} />
-
-      {activeTab === "overview" ? (
-        <section className="content-card">
-          <div className="concert-list">
-            {concerts.map((concert) => (
-              <ConcertCard
-                key={concert.id}
-                concert={concert}
-                mode="admin"
-                isBusy={busyKey === `delete-${concert.id}`}
-                onDelete={setDeleteTarget}
-              />
-            ))}
-          </div>
-        </section>
+      {isLoading ? (
+        <p className="dashboard-loading">Loading dashboard…</p>
+      ) : fetchError ? (
+        <div className="fetch-error-banner">
+          <p>{fetchError}</p>
+          <button className="base-button button-primary" onClick={() => { if (token) { setIsLoading(true); void refresh(token); } }} type="button">
+            Retry
+          </button>
+        </div>
       ) : (
-        <CreateConcertForm
-          fieldErrors={fieldErrors}
-          isSubmitting={busyKey === "create"}
-          onSubmit={async (payload) => {
-            if (!token) {
-              return false;
-            }
+        <>
+          <div className="stats-grid">
+            <StatCard
+              icon="/icons/statcard-seats.png"
+              label="Total of seats"
+              value={stats.totalSeats}
+              tone="seat"
+            />
+            <StatCard
+              icon="/icons/statcard-reserve.png"
+              label="Reserve"
+              value={stats.reservedSeats}
+              tone="reserve"
+            />
+            <StatCard
+              icon="/icons/statcard-cancel.png"
+              label="Cancel"
+              value={stats.cancelledReservations}
+              tone="cancel"
+            />
+          </div>
 
-            setBusyKey("create");
-            setFieldErrors({});
+          <TabSwitcher activeTab={activeTab} onChange={setActiveTab} />
 
-            try {
-              await api.createConcert(token, payload);
-              await refresh(token);
-              setActiveTab("overview");
-              showToast("Create successfully");
-              return true;
-            } catch (error) {
-              if (error instanceof ApiError) {
-                setFieldErrors(extractFieldErrors(error));
-                showToast(error.message, "error");
-              }
-              return false;
-            } finally {
-              setBusyKey(null);
-            }
-          }}
-        />
+          {activeTab === "overview" ? (
+            <section className="content-section">
+              <div className="concert-list">
+                {concerts.length === 0 ? (
+                  <p className="empty-state">No concerts yet. Switch to the Create tab to add one.</p>
+                ) : (
+                  concerts.map((concert) => (
+                    <ConcertCard
+                      key={concert.id}
+                      concert={concert}
+                      mode="admin"
+                      isBusy={busyKey === `delete-${concert.id}`}
+                      onDelete={setDeleteTarget}
+                    />
+                  ))
+                )}
+              </div>
+            </section>
+          ) : (
+            <CreateConcertForm
+              fieldErrors={fieldErrors}
+              isSubmitting={busyKey === "create"}
+              onClearFieldError={(field) => setFieldErrors((prev) => { const { [field]: _, ...rest } = prev; return rest; })}
+              onSubmit={async (payload) => {
+                if (!token) {
+                  return false;
+                }
+
+                setBusyKey("create");
+                setFieldErrors({});
+
+                try {
+                  await api.createConcert(token, payload);
+                  await refresh(token);
+                  setActiveTab("overview");
+                  showToast("Create successfully");
+                  return true;
+                } catch (error) {
+                  if (handleAuthError(error)) return false;
+                  if (error instanceof ApiError) {
+                    setFieldErrors(extractFieldErrors(error));
+                    showToast(error.message, "error");
+                  } else if (error instanceof NetworkError) {
+                    showToast(error.message, "error");
+                  } else {
+                    showToast("Something went wrong. Please try again.", "error");
+                  }
+                  return false;
+                } finally {
+                  setBusyKey(null);
+                }
+              }}
+            />
+          )}
+        </>
       )}
 
       {deleteTarget ? (
@@ -139,8 +188,13 @@ export function AdminDashboard() {
               showToast("Delete successfully");
               setDeleteTarget(null);
             } catch (error) {
+              if (handleAuthError(error)) return;
               showToast(
-                error instanceof ApiError ? error.message : "Unable to delete concert",
+                error instanceof ApiError
+                  ? error.message
+                  : error instanceof NetworkError
+                    ? error.message
+                    : "Unable to delete concert",
                 "error",
               );
             } finally {
