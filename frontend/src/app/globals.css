@@ -525,10 +525,10 @@ hr {
 .modal-card {
   position: relative;
   z-index: 61;
-  width: min(100%, 780px);
-  border-radius: 16px;
+  width: min(100%, 432px);
+  border-radius: 12px;
   background: #ffffff;
-  padding: 28px 36px 44px;
+  padding: 20px 22px 22px;
   text-align: center;
   box-shadow: 0 28px 65px rgba(0, 0, 0, 0.18);
 }
@@ -539,38 +539,38 @@ hr {
 }
 
 .modal-icon {
-  width: 64px;
-  height: 64px;
+  width: 44px;
+  height: 44px;
 }
 
 .modal-title {
-  margin-top: 18px;
-  font-size: clamp(2rem, 3vw, 2.45rem);
+  margin-top: 14px;
+  font-size: clamp(1.2rem, 1.6vw, 1.56rem);
   font-weight: 700;
-  line-height: 1.18;
+  line-height: 1.2;
   letter-spacing: -0.03em;
 }
 
 .modal-subtitle {
-  margin-top: 8px;
+  margin-top: 5px;
   color: var(--text-primary);
-  font-size: clamp(2rem, 3vw, 2.45rem);
-  font-weight: 700;
-  line-height: 1.18;
+  font-size: clamp(1.08rem, 1.44vw, 1.36rem);
+  font-weight: 600;
+  line-height: 1.22;
   letter-spacing: -0.03em;
 }
 
 .modal-actions {
-  margin-top: 44px;
+  margin-top: 22px;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 28px;
+  gap: 11px;
 }
 
 .modal-actions .base-button {
-  min-height: 86px;
-  border-radius: 8px;
-  font-size: 1.15rem;
+  min-height: 46px;
+  border-radius: 6px;
+  font-size: 0.92rem;
   font-weight: 500;
 }
 
