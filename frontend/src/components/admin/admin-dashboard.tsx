@@ -149,7 +149,7 @@ export function AdminDashboard() {
                   await api.createConcert(token, payload);
                   await refresh(token);
                   setActiveTab("overview");
-                  showToast("Create successfully");
+                  showToast("Concert created successfully.");
                   return true;
                 } catch (error) {
                   if (handleAuthError(error)) return false;
@@ -185,7 +185,7 @@ export function AdminDashboard() {
             try {
               await api.deleteConcert(token, deleteTarget.id);
               await refresh(token);
-              showToast("Delete successfully");
+              showToast("Concert deleted successfully.");
               setDeleteTarget(null);
             } catch (error) {
               if (handleAuthError(error)) return;
@@ -194,7 +194,7 @@ export function AdminDashboard() {
                   ? error.message
                   : error instanceof NetworkError
                     ? error.message
-                    : "Unable to delete concert",
+                    : "Unable to delete concert. Please try again.",
                 "error",
               );
             } finally {

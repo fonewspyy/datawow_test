@@ -4,6 +4,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import type { JwtPayload, UserRole } from '../common/types/jwt-payload.type';
 import { PrismaService } from '../prisma/prisma.service';
@@ -32,19 +33,34 @@ export class AuthService {
     });
 
     if (existingUser) {
-      throw new ConflictException('Username already exists');
+      throw new ConflictException(
+        'This username is already taken. Please choose a different one.',
+      );
     }
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);
-    const user = await this.prisma.user.create({
-      data: {
-        username: dto.username,
-        password: hashedPassword,
-        role: 'USER',
-      },
-    });
 
-    return this.buildAuthResponse(user.id, user.username, user.role);
+    try {
+      const user = await this.prisma.user.create({
+        data: {
+          username: dto.username,
+          password: hashedPassword,
+          role: 'USER',
+        },
+      });
+
+      return this.buildAuthResponse(user.id, user.username, user.role);
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException(
+          'This username is already taken. Please choose a different one.',
+        );
+      }
+      throw error;
+    }
   }
 
   async login(dto: LoginDto): Promise<AuthResponse> {
@@ -53,13 +69,17 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new UnauthorizedException('Invalid username or password');
+      throw new UnauthorizedException(
+        'Invalid username or password. Please check your credentials and try again.',
+      );
     }
 
     const isPasswordValid = await bcrypt.compare(dto.password, user.password);
 
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid username or password');
+      throw new UnauthorizedException(
+        'Invalid username or password. Please check your credentials and try again.',
+      );
     }
 
     return this.buildAuthResponse(user.id, user.username, user.role);

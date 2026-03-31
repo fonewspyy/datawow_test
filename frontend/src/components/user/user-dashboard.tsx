@@ -90,7 +90,7 @@ export function UserDashboard() {
                     try {
                       await api.reserve(token, concertId);
                       await refresh(token);
-                      pushToast("Reserve successfully");
+                      pushToast("Reservation confirmed! Your seat has been secured.");
                     } catch (error) {
                       if (handleAuthError(error)) return;
                       pushToast(
@@ -98,7 +98,7 @@ export function UserDashboard() {
                           ? error.message
                           : error instanceof NetworkError
                             ? error.message
-                            : "Unable to reserve seat",
+                            : "Unable to complete reservation. Please try again.",
                         "error",
                       );
                     } finally {
@@ -114,7 +114,7 @@ export function UserDashboard() {
                     try {
                       await api.cancel(token, concertId);
                       await refresh(token);
-                      pushToast("Cancel successfully");
+                      pushToast("Reservation cancelled. Your seat has been released.");
                     } catch (error) {
                       if (handleAuthError(error)) return;
                       pushToast(
@@ -122,7 +122,7 @@ export function UserDashboard() {
                           ? error.message
                           : error instanceof NetworkError
                             ? error.message
-                            : "Unable to cancel reservation",
+                            : "Unable to cancel reservation. Please try again.",
                         "error",
                       );
                     } finally {

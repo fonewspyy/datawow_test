@@ -22,17 +22,49 @@ interface NavItem {
   hidden?: boolean;
 }
 
+type SidebarPhase = "closed" | "opening" | "open" | "closing";
+
+const SIDEBAR_TRANSITION_MS = 220;
+
 export function DashboardShell({ viewMode, children }: DashboardShellProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [sidebarPhase, setSidebarPhase] = useState<SidebarPhase>("closed");
   const { logout, user } = useAuth();
   const canSwitchToAdmin = user?.role === "ADMIN";
+  const isSidebarVisible = sidebarPhase !== "closed";
+  const isSidebarExpanded = sidebarPhase === "opening" || sidebarPhase === "open";
+  const isMobileToggleVisible = sidebarPhase === "closed";
 
-  const closeSidebar = useCallback(() => setIsSidebarOpen(false), []);
+  const openSidebar = useCallback(() => {
+    setSidebarPhase((currentPhase) => {
+      if (currentPhase === "open" || currentPhase === "opening") {
+        return currentPhase;
+      }
+
+      return "opening";
+    });
+  }, []);
+
+  const closeSidebar = useCallback(() => {
+    setSidebarPhase((currentPhase) => {
+      if (currentPhase === "closed" || currentPhase === "closing") {
+        return currentPhase;
+      }
+
+      return "closing";
+    });
+  }, []);
+
   const closeSidebarOnPathChange = useEffectEvent(() => {
     startTransition(() => {
-      setIsSidebarOpen(false);
+      setSidebarPhase((currentPhase) => {
+        if (currentPhase === "open" || currentPhase === "opening") {
+          return "closing";
+        }
+
+        return currentPhase;
+      });
     });
   });
 
@@ -43,16 +75,58 @@ export function DashboardShell({ viewMode, children }: DashboardShellProps) {
 
   /* Prevent body scroll when mobile sidebar is open + close on Escape */
   useEffect(() => {
-    document.body.style.overflow = isSidebarOpen ? "hidden" : "";
+    document.body.style.overflow = isSidebarVisible ? "hidden" : "";
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") closeSidebar();
     };
-    if (isSidebarOpen) window.addEventListener("keydown", onKey);
+    if (isSidebarVisible) window.addEventListener("keydown", onKey);
     return () => {
       document.body.style.overflow = "";
       window.removeEventListener("keydown", onKey);
     };
-  }, [isSidebarOpen, closeSidebar]);
+  }, [isSidebarVisible, closeSidebar]);
+
+  useEffect(() => {
+    if (sidebarPhase !== "opening" && sidebarPhase !== "closing") {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setSidebarPhase((currentPhase) => {
+        if (currentPhase === "opening") {
+          return "open";
+        }
+
+        if (currentPhase === "closing") {
+          return "closed";
+        }
+
+        return currentPhase;
+      });
+    }, SIDEBAR_TRANSITION_MS + 40);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [sidebarPhase]);
+
+  const handleSidebarTransitionEnd = useCallback((event: React.TransitionEvent<HTMLElement>) => {
+    if (event.target !== event.currentTarget || event.propertyName !== "transform") {
+      return;
+    }
+
+    setSidebarPhase((currentPhase) => {
+      if (currentPhase === "opening") {
+        return "open";
+      }
+
+      if (currentPhase === "closing") {
+        return "closed";
+      }
+
+      return currentPhase;
+    });
+  }, []);
 
   const items: NavItem[] = viewMode === "admin"
     ? [
@@ -77,18 +151,6 @@ export function DashboardShell({ viewMode, children }: DashboardShellProps) {
       ]
     : [
         {
-          label: "Home",
-          href: "/user",
-          icon: "/icons/sidebar-home.png",
-          isActive: pathname === "/user",
-        },
-        {
-          label: "History",
-          href: "/user/history",
-          icon: "/icons/sidebar-history.png",
-          isActive: pathname.startsWith("/user/history"),
-        },
-        {
           label: "Switch to Admin",
           href: "/admin",
           icon: "/icons/sidebar-switch.png",
@@ -100,15 +162,19 @@ export function DashboardShell({ viewMode, children }: DashboardShellProps) {
   return (
     <div className="dashboard-shell">
       {/* Backdrop — click to close sidebar on mobile */}
-      {isSidebarOpen && (
+      {isSidebarVisible && (
         <div
-          className="sidebar-backdrop"
+          className={`sidebar-backdrop${isSidebarExpanded ? " is-visible" : ""}`}
           onClick={closeSidebar}
           aria-hidden="true"
         />
       )}
 
-      <aside className={`dashboard-sidebar ${isSidebarOpen ? "is-open" : ""}`}>
+      <aside
+        id="dashboard-sidebar"
+        className={`dashboard-sidebar${isSidebarExpanded ? " is-open" : ""}`}
+        onTransitionEnd={handleSidebarTransitionEnd}
+      >
         <div className="dashboard-sidebar-header">
           <div className="dashboard-sidebar-title">
             {viewMode === "admin" ? "Admin" : "User"}
@@ -124,8 +190,8 @@ export function DashboardShell({ viewMode, children }: DashboardShellProps) {
                 className={`sidebar-link${item.isActive ? " is-active" : ""}`}
                 onClick={closeSidebar}
               >
-                <Image src={item.icon} alt="" width={24} height={24} />
-                <span>{item.label}</span>
+                <Image className="sidebar-icon" src={item.icon} alt="" width={20} height={20} />
+                <span className="sidebar-label">{item.label}</span>
               </Link>
             ) : (
               <button
@@ -137,8 +203,8 @@ export function DashboardShell({ viewMode, children }: DashboardShellProps) {
                 }}
                 type="button"
               >
-                <Image src={item.icon} alt="" width={24} height={24} />
-                <span>{item.label}</span>
+                <Image className="sidebar-icon" src={item.icon} alt="" width={20} height={20} />
+                <span className="sidebar-label">{item.label}</span>
               </button>
             )
           ))}
@@ -155,29 +221,28 @@ export function DashboardShell({ viewMode, children }: DashboardShellProps) {
             router.replace("/login");
           }}
         >
-          <Image src="/icons/sidebar-logout.png" alt="" width={24} height={24} />
-          <span>Logout</span>
+          <Image className="sidebar-icon" src="/icons/sidebar-logout.png" alt="" width={20} height={20} />
+          <span className="sidebar-label">Logout</span>
         </button>
       </aside>
 
       <main className="dashboard-main">
         <div className="dashboard-main-inner">
           {/* Hamburger toggle — visible only on mobile */}
-          {!isSidebarOpen ? (
-            <button
-              className="mobile-sidebar-toggle"
-              type="button"
-              aria-label="Open menu"
-              aria-expanded={false}
-              onClick={() => setIsSidebarOpen(true)}
-            >
-              <span className="hamburger">
-                <span />
-                <span />
-                <span />
-              </span>
-            </button>
-          ) : null}
+          <button
+            className={`mobile-sidebar-toggle${isMobileToggleVisible ? "" : " is-hidden"}`}
+            type="button"
+            aria-label="Open menu"
+            aria-controls="dashboard-sidebar"
+            aria-expanded={isSidebarExpanded}
+            onClick={openSidebar}
+          >
+            <span className="hamburger">
+              <span />
+              <span />
+              <span />
+            </span>
+          </button>
           {children}
         </div>
       </main>

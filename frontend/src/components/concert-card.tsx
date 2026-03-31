@@ -21,8 +21,13 @@ export function ConcertCard({
   const isReserved = concert.userReservationStatus === "RESERVED";
 
   return (
-    <article className="concert-card">
-      <h2 className="concert-title">{concert.name}</h2>
+    <article className={`concert-card${concert.isSoldOut && mode === "user" && !isReserved ? " is-sold-out" : ""}`}>
+      <div className="concert-header">
+        <h2 className="concert-title">{concert.name}</h2>
+        {concert.isSoldOut && mode === "user" && !isReserved && (
+          <span className="sold-out-badge">Sold out</span>
+        )}
+      </div>
       <hr className="mt-5" />
       <p className="concert-description">{concert.description}</p>
       <div className="concert-footer">

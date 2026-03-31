@@ -83,7 +83,9 @@ export class ConcertService {
     });
 
     if (!concert) {
-      throw new NotFoundException('Concert not found');
+      throw new NotFoundException(
+        'Concert not found. It may have already been deleted.',
+      );
     }
 
     await this.prisma.concert.delete({
