@@ -9,5 +9,6 @@
       "changeProcessCWD": true
     }
   ],
-  "css.lint.unknownAtRules": "ignore"
+  "css.lint.unknownAtRules": "ignore",
+  "mssql.autoDisableNonTSqlLanguageService": true
 }

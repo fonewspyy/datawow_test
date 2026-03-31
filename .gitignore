@@ -1,38 +1,48 @@
-# Dependencies
+# ========================================
+# Concert Reservation — Monorepo .gitignore
+# ========================================
+
+# ---------- Dependencies ----------
 node_modules/
-__pycache__/
-*.pyc
-*.pyo
-venv/
-env/
 
-# Build outputs
+# ---------- Build outputs ----------
 dist/
-build/
 .next/
-coverage/
-*.egg-info/
+out/
+build/
 
-# IDE
-.vscode/*
-!.vscode/settings.json
+# ---------- Environment ----------
+# Block secrets but KEEP .env.example for easy setup
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# ---------- OS ----------
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---------- IDE ----------
 .idea/
 *.swp
 *.swo
-*~
 
-# OS
-.DS_Store
-Thumbs.db
-
-# Environment
-.env
-.env.local
-
-# Logs
-*.log
+# ---------- Debug logs ----------
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
 
-# Temporary files
-.temp/
-tmp/
+# ---------- Test / Coverage ----------
+coverage/
+
+# ---------- TypeScript ----------
+*.tsbuildinfo
+
+# ---------- Docker ----------
+postgres-data/
+
+# ---------- Misc ----------
+*.pem
+.vercel
