@@ -42,8 +42,9 @@ describe('ReservationService', () => {
     };
 
     prisma = {
-      $transaction: jest.fn(async (callback: (transactionClient: typeof tx) => Promise<unknown>) =>
-        callback(tx),
+      $transaction: jest.fn(
+        async (callback: (transactionClient: typeof tx) => Promise<unknown>) =>
+          callback(tx),
       ),
       reservationHistory: {
         findMany: jest.fn(),
@@ -96,7 +97,9 @@ describe('ReservationService', () => {
       status: 'RESERVED',
     });
 
-    await expect(service.reserve(4, 12)).rejects.toBeInstanceOf(ConflictException);
+    await expect(service.reserve(4, 12)).rejects.toBeInstanceOf(
+      ConflictException,
+    );
   });
 
   it('rejects reservations when all seats are already reserved', async () => {
@@ -104,12 +107,16 @@ describe('ReservationService', () => {
     tx.reservation.findUnique.mockResolvedValue(null);
     tx.reservation.count.mockResolvedValue(2);
 
-    await expect(service.reserve(4, 12)).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.reserve(4, 12)).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
   });
 
   it('rejects cancellation when the active reservation does not exist', async () => {
     tx.reservation.findUnique.mockResolvedValue(null);
 
-    await expect(service.cancel(4, 12)).rejects.toBeInstanceOf(NotFoundException);
+    await expect(service.cancel(4, 12)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
   });
 });

@@ -27,13 +27,10 @@ describe('AppController (e2e)', () => {
   });
 
   it('/api/health (GET)', () => {
-    return request(app.getHttpServer())
-      .get('/api/health')
-      .expect(200)
-      .expect({
-        status: 'ok',
-        service: 'concert-backend',
-      });
+    return request(app.getHttpServer()).get('/api/health').expect(200).expect({
+      status: 'ok',
+      service: 'concert-backend',
+    });
   });
 
   afterEach(async () => {

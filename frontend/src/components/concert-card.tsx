@@ -28,7 +28,7 @@ export function ConcertCard({
       <div className="concert-footer">
         <div className="seat-meta">
           <Image src="/icons/icon-user.png" alt="" width={28} height={28} />
-          <span>{concert.availableSeats.toLocaleString()}</span>
+          <span>{concert.totalSeats.toLocaleString()}</span>
         </div>
 
         {mode === "admin" ? (

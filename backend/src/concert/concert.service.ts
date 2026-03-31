@@ -1,7 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateConcertDto } from './dto/create-concert.dto';
 
@@ -53,23 +50,25 @@ export class ConcertService {
   }
 
   async stats() {
-    const [concertAggregate, reservedCount, cancelledCount] = await Promise.all([
-      this.prisma.concert.aggregate({
-        _sum: {
-          totalSeats: true,
-        },
-      }),
-      this.prisma.reservation.count({
-        where: {
-          status: 'RESERVED',
-        },
-      }),
-      this.prisma.reservationHistory.count({
-        where: {
-          action: 'CANCEL',
-        },
-      }),
-    ]);
+    const [concertAggregate, reservedCount, cancelledCount] = await Promise.all(
+      [
+        this.prisma.concert.aggregate({
+          _sum: {
+            totalSeats: true,
+          },
+        }),
+        this.prisma.reservation.count({
+          where: {
+            status: 'RESERVED',
+          },
+        }),
+        this.prisma.reservationHistory.count({
+          where: {
+            action: 'CANCEL',
+          },
+        }),
+      ],
+    );
 
     return {
       totalSeats: concertAggregate._sum.totalSeats ?? 0,

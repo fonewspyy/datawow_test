@@ -5,10 +5,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import type {
-  JwtPayload,
-  UserRole,
-} from '../common/types/jwt-payload.type';
+import type { JwtPayload, UserRole } from '../common/types/jwt-payload.type';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
